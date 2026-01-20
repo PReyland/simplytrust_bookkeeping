@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Vendors / 1099 Report - SimplyTrust{% endblock %}
+
+{% block content %}
+<div class="flex flex-between mb-20">
+    <h1>Vendor Payments - {{ year }}</h1>
+    <div>
+        <a href="?year={{ year - 1 }}" class="btn btn-secondary btn-sm">&larr; {{ year - 1 }}</a>
+        <a href="?year={{ year + 1 }}" class="btn btn-secondary btn-sm">{{ year + 1 }} &rarr;</a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-3 mb-20">
+    <div class="card">
+        <h3>Phillip Reyland</h3>
+        <div class="amount" style="font-size: 1.5em; color: #2e7d32;">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</div>
+        <p class="text-muted" style="font-size: 0.85em;">1099 Taxable Amount</p>
+    </div>
+    <div class="card">
+        <h3>Pratik Shekhar</h3>
+        <div class="amount negative" style="font-size: 1.5em;">${{ "{:,.2f}".format(pratik_total) }}</div>
+        <p class="text-muted" style="font-size: 0.85em;">{{ pratik_payments|length }} payments</p>
+    </div>
+    <div class="card">
+        <h3>Charlie Smith</h3>
+        <div class="amount negative" style="font-size: 1.5em;">${{ "{:,.2f}".format(charlie_total) }}</div>
+        <p class="text-muted" style="font-size: 0.85em;">{{ charlie_payments|length }} payments</p>
+    </div>
+</div>
+
+<!-- Phillip Reyland Detail -->
+<div class="card mb-20">
+    <h2>Phillip Reyland - Detailed Breakdown</h2>
+
+    <h3 style="margin-top: 15px;">Contractor Payments</h3>
+    {% if phillip_payments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for txn in phillip_payments %}
+                <tr>
+                    <td>{{ txn.date }}</td>
+                    <td>{{ txn.description }}</td>
+                    <td>{{ txn.category or 'Uncategorized' }}</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                    <td colspan="3">Contractor Payments Subtotal</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(phillip_contractor_total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p class="text-muted">No contractor payments recorded.</p>
+    {% endif %}
+
+    <h3 style="margin-top: 25px;">Reimbursements Owed (Personal Card Expenses)</h3>
+    {% if phillip_reimbursements %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for txn in phillip_reimbursements %}
+                <tr>
+                    <td>{{ txn.date }}</td>
+                    <td>{{ txn.description }}</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                    <td colspan="2">Reimbursements Subtotal</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(phillip_reimb_total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p class="text-muted">No reimbursements recorded.</p>
+    {% endif %}
+
+    <div style="background: #e8f5e9; padding: 15px; margin-top: 20px; border-radius: 4px; border: 2px solid #4caf50;">
+        <h3 style="margin: 0 0 10px 0;">1099 Taxable Income Calculation</h3>
+        <table style="width: auto;">
+            <tr>
+                <td style="padding: 5px 20px 5px 0;">Contractor Payments (checks):</td>
+                <td class="amount" style="text-align: right;">${{ "{:,.2f}".format(phillip_contractor_total) }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 20px 5px 0;">Less: Loan Repayment (paid back):</td>
+                <td class="amount" style="text-align: right; color: green;">-${{ "{:,.2f}".format(phillip_loan) }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 20px 5px 0;">Less: Expense Reimbursements (paid back):</td>
+                <td class="amount" style="text-align: right; color: green;">-${{ "{:,.2f}".format(phillip_reimb_total) }}</td>
+            </tr>
+            <tr style="font-weight: bold; border-top: 2px solid #333;">
+                <td style="padding: 10px 20px 5px 0;">1099 TAXABLE AMOUNT:</td>
+                <td class="amount" style="text-align: right; padding-top: 10px; font-size: 1.2em;">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<!-- Pratik Shekhar Detail -->
+<div class="card mb-20">
+    <h2>Pratik Shekhar - Payment History</h2>
+    {% if pratik_payments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for txn in pratik_payments %}
+                <tr>
+                    <td>{{ txn.date }}</td>
+                    <td>{{ txn.description }}</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                    <td colspan="2">Total</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(pratik_total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p class="text-muted">No payments recorded.</p>
+    {% endif %}
+</div>
+
+<!-- Charlie Smith Detail -->
+<div class="card mb-20">
+    <h2>Charlie Smith - Payment History</h2>
+    {% if charlie_payments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for txn in charlie_payments %}
+                <tr>
+                    <td>{{ txn.date }}</td>
+                    <td>{{ txn.description }}</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                    <td colspan="2">Total</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(charlie_total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p class="text-muted">No payments recorded.</p>
+    {% endif %}
+</div>
+
+<!-- 1099 Summary -->
+<div class="card">
+    <h2>1099-NEC Summary (Contractors paid $600+)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Contractor</th>
+                <th class="text-right">1099 Taxable Amount</th>
+                <th>1099 Required?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Phillip Reyland</td>
+                <td class="amount">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</td>
+                <td>{% if (phillip_contractor_total - phillip_loan - phillip_reimb_total) >= 600 %}Yes{% else %}No{% endif %}</td>
+            </tr>
+            <tr>
+                <td>Pratik Shekhar</td>
+                <td class="amount">${{ "{:,.2f}".format(pratik_total) }}</td>
+                <td>{% if pratik_total >= 600 %}Yes{% else %}No{% endif %}</td>
+            </tr>
+            <tr>
+                <td>Charlie Smith</td>
+                <td class="amount">${{ "{:,.2f}".format(charlie_total) }}</td>
+                <td>{% if charlie_total >= 600 %}Yes{% else %}No{% endif %}</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr style="font-weight: bold; border-top: 2px solid #333;">
+                <td>Total 1099 Taxable</td>
+                <td class="amount">${{ "{:,.2f}".format((phillip_contractor_total - phillip_loan - phillip_reimb_total) + pratik_total + charlie_total) }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

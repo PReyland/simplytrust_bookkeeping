@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Import - SimplyTrust{% endblock %}
+
+{% block content %}
+<h1 class="mb-20">Import Bank Statement</h1>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Upload File</h2>
+        <form method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Select CSV or PDF file</label>
+                <input type="file" name="file" class="form-control" accept=".csv,.pdf" required>
+            </div>
+
+            <div class="form-group">
+                <label>Account (optional)</label>
+                <select name="account_id" class="form-control">
+                    <option value="">-- Select Account --</option>
+                    {% for acct in accounts %}
+                        <option value="{{ acct.id }}">{{ acct.name }}</option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Associate imported transactions with a specific account</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Import</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Supported Formats</h2>
+        <h3 style="margin: 15px 0 10px;">CSV Files</h3>
+        <p>Most bank CSV exports work automatically. The importer looks for columns named:</p>
+        <ul style="margin: 10px 0 10px 20px;">
+            <li><strong>Date:</strong> date, posted, transaction date</li>
+            <li><strong>Description:</strong> description, memo, narrative, details, payee</li>
+            <li><strong>Amount:</strong> amount, value, or separate debit/credit columns</li>
+        </ul>
+
+        <h3 style="margin: 15px 0 10px;">PDF Files</h3>
+        <p>PDF parsing attempts to extract transactions from tables. Results may vary depending on the PDF format. For best results, export as CSV from your bank if possible.</p>
+
+        <h3 style="margin: 15px 0 10px;">Duplicate Protection</h3>
+        <p>The importer tracks file hashes to prevent importing the same file twice.</p>
+    </div>
+</div>
+
+{% if not accounts %}
+<div class="card" style="margin-top: 20px;">
+    <p><strong>Tip:</strong> <a href="{{ url_for('main.accounts') }}">Create an account</a> first (e.g., "Business Checking", "Business Credit Card") to organize your transactions.</p>
+</div>
+{% endif %}
+{% endblock %}

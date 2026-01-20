@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - SimplyTrust{% endblock %}
+
+{% block content %}
+<div class="flex flex-between mb-20">
+    <h1>Financial Reports - {{ year }}</h1>
+    <div>
+        <a href="?year={{ year - 1 }}" class="btn btn-secondary btn-sm">&larr; {{ year - 1 }}</a>
+        <a href="?year={{ year + 1 }}" class="btn btn-secondary btn-sm">{{ year + 1 }} &rarr;</a>
+    </div>
+</div>
+
+<div class="card mb-20">
+    <h2>Monthly Summary</h2>
+    {% if monthly %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th class="text-right">Income</th>
+                    <th class="text-right">Expenses</th>
+                    <th class="text-right">Net</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set total_income = namespace(value=0) %}
+                {% set total_expenses = namespace(value=0) %}
+                {% for row in monthly %}
+                    {% set total_income.value = total_income.value + row.income %}
+                    {% set total_expenses.value = total_expenses.value + row.expenses %}
+                <tr>
+                    <td>{{ row.month }}</td>
+                    <td class="amount positive">${{ "{:,.2f}".format(row.income) }}</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(row.expenses) }}</td>
+                    <td class="amount {{ 'positive' if row.income - row.expenses >= 0 else 'negative' }}">
+                        ${{ "{:,.2f}".format(row.income - row.expenses) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                    <td>Total</td>
+                    <td class="amount positive">${{ "{:,.2f}".format(total_income.value) }}</td>
+                    <td class="amount negative">${{ "{:,.2f}".format(total_expenses.value) }}</td>
+                    <td class="amount {{ 'positive' if total_income.value - total_expenses.value >= 0 else 'negative' }}">
+                        ${{ "{:,.2f}".format(total_income.value - total_expenses.value) }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p class="text-muted">No data for {{ year }}.</p>
+    {% endif %}
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Income by Category</h2>
+        {% set income_cats = by_category | selectattr('type', 'equalto', 'income') | list %}
+        {% if income_cats %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in income_cats %}
+                    <tr>
+                        <td>{{ cat.name }}</td>
+                        <td class="amount positive">${{ "{:,.2f}".format(cat.total) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">No categorized income.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Expenses by Category</h2>
+        {% set expense_cats = by_category | selectattr('type', 'equalto', 'expense') | list %}
+        {% if expense_cats %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in expense_cats %}
+                    <tr>
+                        <td>{{ cat.name }}</td>
+                        <td class="amount negative">${{ "{:,.2f}".format(cat.total) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">No categorized expenses.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

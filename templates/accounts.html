@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Accounts - SimplyTrust{% endblock %}
+
+{% block content %}
+<h1 class="mb-20">Accounts</h1>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Add Account</h2>
+        <form method="post" action="{{ url_for('main.add_account') }}">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="name" class="form-control" required placeholder="e.g., Business Checking">
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select name="account_type" class="form-control" required>
+                    <option value="checking">Checking</option>
+                    <option value="savings">Savings</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="cash">Cash</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="stripe">Stripe</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Account</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Your Accounts</h2>
+        {% if accounts %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th class="text-right">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for acct in accounts %}
+                    <tr>
+                        <td>{{ acct.name }}</td>
+                        <td>{{ acct.account_type }}</td>
+                        <td class="amount {{ 'positive' if acct.balance >= 0 else 'negative' }}">
+                            ${{ "{:,.2f}".format(acct.balance) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">No accounts yet. Add your bank accounts, credit cards, and payment processors to track transactions by account.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
