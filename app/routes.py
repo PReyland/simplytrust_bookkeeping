@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
@@ -53,10 +53,11 @@ def index():
         ORDER BY total DESC
     """, (start_date, end_date)).fetchall()
 
-    # Uncategorized count
+    # Uncategorized count (for selected year)
     uncategorized = conn.execute("""
-        SELECT COUNT(*) as count FROM transactions WHERE category_id IS NULL
-    """).fetchone()['count']
+        SELECT COUNT(*) as count FROM transactions
+        WHERE category_id IS NULL AND date BETWEEN ? AND ?
+    """, (start_date, end_date)).fetchone()['count']
 
     # Recent transactions
     recent = Transaction.all(limit=10)
@@ -220,9 +221,6 @@ def import_file():
 @bp.route('/categorize')
 def bulk_categorize():
     """Bulk categorize uncategorized transactions."""
-    txns = Transaction.all(limit=100, filters={'category_id': None})
-
-    # Get transactions without category (need raw query)
     conn = get_connection()
     uncategorized = conn.execute("""
         SELECT t.*, a.name as account_name
@@ -332,8 +330,6 @@ def vendors():
     # Calculate totals
     phillip_contractor_total = sum(r['amount'] for r in phillip_payments if r['category'] == 'Contractors')
     phillip_reimb_total = sum(r['amount'] for r in phillip_reimbursements)
-    phillip_net = phillip_contractor_total - phillip_loan + phillip_reimb_total
-
     pratik_total = sum(r['amount'] for r in pratik_payments)
     charlie_total = sum(r['amount'] for r in charlie_payments)
 
@@ -344,7 +340,6 @@ def vendors():
                            phillip_loan=phillip_loan,
                            phillip_contractor_total=phillip_contractor_total,
                            phillip_reimb_total=phillip_reimb_total,
-                           phillip_net=phillip_net,
                            pratik_payments=[dict(r) for r in pratik_payments],
                            pratik_total=pratik_total,
                            charlie_payments=[dict(r) for r in charlie_payments],

@@ -3,30 +3,31 @@
 {% block title %}Vendors / 1099 Report - SimplyTrust{% endblock %}
 
 {% block content %}
-<div class="flex flex-between mb-20">
-    <h1>Vendor Payments - {{ year }}</h1>
-    <div>
+<div class="page-header">
+    <h1>Vendor Payments</h1>
+    <div class="year-nav">
         <a href="?year={{ year - 1 }}" class="btn btn-secondary btn-sm">&larr; {{ year - 1 }}</a>
+        <span class="current-year">{{ year }}</span>
         <a href="?year={{ year + 1 }}" class="btn btn-secondary btn-sm">{{ year + 1 }} &rarr;</a>
     </div>
 </div>
 
 <!-- Summary Cards -->
 <div class="grid grid-3 mb-20">
-    <div class="card">
-        <h3>Phillip Reyland</h3>
-        <div class="amount" style="font-size: 1.5em; color: #2e7d32;">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</div>
-        <p class="text-muted" style="font-size: 0.85em;">1099 Taxable Amount</p>
+    <div class="stat-card">
+        <div class="label">Phillip Reyland</div>
+        <div class="value" style="color: var(--success);">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</div>
+        <div class="text-muted" style="font-size: 13px; margin-top: 4px;">1099 Taxable Amount</div>
     </div>
-    <div class="card">
-        <h3>Pratik Shekhar</h3>
-        <div class="amount negative" style="font-size: 1.5em;">${{ "{:,.2f}".format(pratik_total) }}</div>
-        <p class="text-muted" style="font-size: 0.85em;">{{ pratik_payments|length }} payments</p>
+    <div class="stat-card">
+        <div class="label">Pratik Shekhar</div>
+        <div class="value" style="color: var(--danger);">${{ "{:,.2f}".format(pratik_total) }}</div>
+        <div class="text-muted" style="font-size: 13px; margin-top: 4px;">{{ pratik_payments|length }} payment{{ 's' if pratik_payments|length != 1 }}</div>
     </div>
-    <div class="card">
-        <h3>Charlie Smith</h3>
-        <div class="amount negative" style="font-size: 1.5em;">${{ "{:,.2f}".format(charlie_total) }}</div>
-        <p class="text-muted" style="font-size: 0.85em;">{{ charlie_payments|length }} payments</p>
+    <div class="stat-card">
+        <div class="label">Charlie Smith</div>
+        <div class="value" style="color: var(--danger);">${{ "{:,.2f}".format(charlie_total) }}</div>
+        <div class="text-muted" style="font-size: 13px; margin-top: 4px;">{{ charlie_payments|length }} payment{{ 's' if charlie_payments|length != 1 }}</div>
     </div>
 </div>
 
@@ -34,7 +35,7 @@
 <div class="card mb-20">
     <h2>Phillip Reyland - Detailed Breakdown</h2>
 
-    <h3 style="margin-top: 15px;">Contractor Payments</h3>
+    <h3 style="margin-top: 8px;">Contractor Payments</h3>
     {% if phillip_payments %}
         <table>
             <thead>
@@ -48,25 +49,31 @@
             <tbody>
                 {% for txn in phillip_payments %}
                 <tr>
-                    <td>{{ txn.date }}</td>
-                    <td>{{ txn.description }}</td>
-                    <td>{{ txn.category or 'Uncategorized' }}</td>
+                    <td style="white-space: nowrap;">{{ txn.date }}</td>
+                    <td>{{ txn.description[:40] }}{% if txn.description|length > 40 %}...{% endif %}</td>
+                    <td>
+                        {% if txn.category %}
+                            <span class="badge badge-expense">{{ txn.category }}</span>
+                        {% else %}
+                            <span class="badge badge-uncategorized">Uncategorized</span>
+                        {% endif %}
+                    </td>
                     <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                <tr style="font-weight: 700; background: var(--gray-50);">
                     <td colspan="3">Contractor Payments Subtotal</td>
                     <td class="amount negative">${{ "{:,.2f}".format(phillip_contractor_total) }}</td>
                 </tr>
             </tfoot>
         </table>
     {% else %}
-        <p class="text-muted">No contractor payments recorded.</p>
+        <p class="text-muted" style="padding: 16px 0;">No contractor payments recorded.</p>
     {% endif %}
 
-    <h3 style="margin-top: 25px;">Reimbursements Owed (Personal Card Expenses)</h3>
+    <h3 style="margin-top: 28px;">Reimbursements (Personal Card Expenses)</h3>
     {% if phillip_reimbursements %}
         <table>
             <thead>
@@ -79,41 +86,41 @@
             <tbody>
                 {% for txn in phillip_reimbursements %}
                 <tr>
-                    <td>{{ txn.date }}</td>
-                    <td>{{ txn.description }}</td>
+                    <td style="white-space: nowrap;">{{ txn.date }}</td>
+                    <td>{{ txn.description[:50] }}{% if txn.description|length > 50 %}...{% endif %}</td>
                     <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                <tr style="font-weight: 700; background: var(--gray-50);">
                     <td colspan="2">Reimbursements Subtotal</td>
                     <td class="amount negative">${{ "{:,.2f}".format(phillip_reimb_total) }}</td>
                 </tr>
             </tfoot>
         </table>
     {% else %}
-        <p class="text-muted">No reimbursements recorded.</p>
+        <p class="text-muted" style="padding: 16px 0;">No reimbursements recorded.</p>
     {% endif %}
 
-    <div style="background: #e8f5e9; padding: 15px; margin-top: 20px; border-radius: 4px; border: 2px solid #4caf50;">
-        <h3 style="margin: 0 0 10px 0;">1099 Taxable Income Calculation</h3>
-        <table style="width: auto;">
+    <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 20px; margin-top: 24px; border-radius: var(--radius-sm); border: 1px solid #a7f3d0;">
+        <h3 style="margin: 0 0 16px 0; color: #065f46;">1099 Taxable Income Calculation</h3>
+        <table style="width: auto; background: transparent;">
             <tr>
-                <td style="padding: 5px 20px 5px 0;">Contractor Payments (checks):</td>
-                <td class="amount" style="text-align: right;">${{ "{:,.2f}".format(phillip_contractor_total) }}</td>
+                <td style="padding: 6px 24px 6px 0; border: none; color: #065f46;">Contractor Payments (checks):</td>
+                <td class="amount" style="border: none; color: #065f46;">${{ "{:,.2f}".format(phillip_contractor_total) }}</td>
             </tr>
             <tr>
-                <td style="padding: 5px 20px 5px 0;">Less: Loan Repayment (paid back):</td>
-                <td class="amount" style="text-align: right; color: green;">-${{ "{:,.2f}".format(phillip_loan) }}</td>
+                <td style="padding: 6px 24px 6px 0; border: none; color: #065f46;">Less: Loan Repayment:</td>
+                <td class="amount" style="border: none; color: #059669;">-${{ "{:,.2f}".format(phillip_loan) }}</td>
             </tr>
             <tr>
-                <td style="padding: 5px 20px 5px 0;">Less: Expense Reimbursements (paid back):</td>
-                <td class="amount" style="text-align: right; color: green;">-${{ "{:,.2f}".format(phillip_reimb_total) }}</td>
+                <td style="padding: 6px 24px 6px 0; border: none; color: #065f46;">Less: Expense Reimbursements:</td>
+                <td class="amount" style="border: none; color: #059669;">-${{ "{:,.2f}".format(phillip_reimb_total) }}</td>
             </tr>
-            <tr style="font-weight: bold; border-top: 2px solid #333;">
-                <td style="padding: 10px 20px 5px 0;">1099 TAXABLE AMOUNT:</td>
-                <td class="amount" style="text-align: right; padding-top: 10px; font-size: 1.2em;">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</td>
+            <tr style="font-weight: 700; border-top: 2px solid #065f46;">
+                <td style="padding: 12px 24px 6px 0; border: none; color: #065f46;">1099 TAXABLE AMOUNT:</td>
+                <td class="amount" style="border: none; padding-top: 12px; font-size: 1.3em; color: #065f46;">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</td>
             </tr>
         </table>
     </div>
@@ -134,21 +141,23 @@
             <tbody>
                 {% for txn in pratik_payments %}
                 <tr>
-                    <td>{{ txn.date }}</td>
-                    <td>{{ txn.description }}</td>
+                    <td style="white-space: nowrap;">{{ txn.date }}</td>
+                    <td>{{ txn.description[:50] }}{% if txn.description|length > 50 %}...{% endif %}</td>
                     <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                <tr style="font-weight: 700; background: var(--gray-50);">
                     <td colspan="2">Total</td>
                     <td class="amount negative">${{ "{:,.2f}".format(pratik_total) }}</td>
                 </tr>
             </tfoot>
         </table>
     {% else %}
-        <p class="text-muted">No payments recorded.</p>
+        <div class="empty-state">
+            <p class="text-muted">No payments recorded.</p>
+        </div>
     {% endif %}
 </div>
 
@@ -167,54 +176,75 @@
             <tbody>
                 {% for txn in charlie_payments %}
                 <tr>
-                    <td>{{ txn.date }}</td>
-                    <td>{{ txn.description }}</td>
+                    <td style="white-space: nowrap;">{{ txn.date }}</td>
+                    <td>{{ txn.description[:50] }}{% if txn.description|length > 50 %}...{% endif %}</td>
                     <td class="amount negative">${{ "{:,.2f}".format(txn.amount) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                <tr style="font-weight: 700; background: var(--gray-50);">
                     <td colspan="2">Total</td>
                     <td class="amount negative">${{ "{:,.2f}".format(charlie_total) }}</td>
                 </tr>
             </tfoot>
         </table>
     {% else %}
-        <p class="text-muted">No payments recorded.</p>
+        <div class="empty-state">
+            <p class="text-muted">No payments recorded.</p>
+        </div>
     {% endif %}
 </div>
 
 <!-- 1099 Summary -->
 <div class="card">
-    <h2>1099-NEC Summary (Contractors paid $600+)</h2>
+    <h2>1099-NEC Summary</h2>
+    <p class="text-muted mb-20">Contractors paid $600 or more require a 1099-NEC form.</p>
     <table>
         <thead>
             <tr>
                 <th>Contractor</th>
                 <th class="text-right">1099 Taxable Amount</th>
-                <th>1099 Required?</th>
+                <th class="text-center">1099 Required?</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>Phillip Reyland</td>
+                <td style="font-weight: 500;">Phillip Reyland</td>
                 <td class="amount">${{ "{:,.2f}".format(phillip_contractor_total - phillip_loan - phillip_reimb_total) }}</td>
-                <td>{% if (phillip_contractor_total - phillip_loan - phillip_reimb_total) >= 600 %}Yes{% else %}No{% endif %}</td>
+                <td class="text-center">
+                    {% if (phillip_contractor_total - phillip_loan - phillip_reimb_total) >= 600 %}
+                        <span class="badge badge-expense">Yes</span>
+                    {% else %}
+                        <span class="badge badge-income">No</span>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
-                <td>Pratik Shekhar</td>
+                <td style="font-weight: 500;">Pratik Shekhar</td>
                 <td class="amount">${{ "{:,.2f}".format(pratik_total) }}</td>
-                <td>{% if pratik_total >= 600 %}Yes{% else %}No{% endif %}</td>
+                <td class="text-center">
+                    {% if pratik_total >= 600 %}
+                        <span class="badge badge-expense">Yes</span>
+                    {% else %}
+                        <span class="badge badge-income">No</span>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
-                <td>Charlie Smith</td>
+                <td style="font-weight: 500;">Charlie Smith</td>
                 <td class="amount">${{ "{:,.2f}".format(charlie_total) }}</td>
-                <td>{% if charlie_total >= 600 %}Yes{% else %}No{% endif %}</td>
+                <td class="text-center">
+                    {% if charlie_total >= 600 %}
+                        <span class="badge badge-expense">Yes</span>
+                    {% else %}
+                        <span class="badge badge-income">No</span>
+                    {% endif %}
+                </td>
             </tr>
         </tbody>
         <tfoot>
-            <tr style="font-weight: bold; border-top: 2px solid #333;">
+            <tr style="font-weight: 700; background: var(--gray-50);">
                 <td>Total 1099 Taxable</td>
                 <td class="amount">${{ "{:,.2f}".format((phillip_contractor_total - phillip_loan - phillip_reimb_total) + pratik_total + charlie_total) }}</td>
                 <td></td>

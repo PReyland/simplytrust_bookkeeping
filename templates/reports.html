@@ -3,16 +3,91 @@
 {% block title %}Reports - SimplyTrust{% endblock %}
 
 {% block content %}
-<div class="flex flex-between mb-20">
-    <h1>Financial Reports - {{ year }}</h1>
-    <div>
+<div class="page-header">
+    <h1>Financial Reports</h1>
+    <div class="year-nav">
         <a href="?year={{ year - 1 }}" class="btn btn-secondary btn-sm">&larr; {{ year - 1 }}</a>
+        <span class="current-year">{{ year }}</span>
         <a href="?year={{ year + 1 }}" class="btn btn-secondary btn-sm">{{ year + 1 }} &rarr;</a>
     </div>
 </div>
 
+{% set total_income = namespace(value=0) %}
+{% set total_expenses = namespace(value=0) %}
+{% for row in monthly %}
+    {% set total_income.value = total_income.value + row.income %}
+    {% set total_expenses.value = total_expenses.value + row.expenses %}
+{% endfor %}
+{% set net_profit = total_income.value - total_expenses.value %}
+{% set profit_margin = (net_profit / total_income.value * 100) if total_income.value > 0 else 0 %}
+
+<!-- Year Summary Cards -->
+<div class="grid grid-4 mb-20">
+    <div class="stat-card income">
+        <div class="value">${{ "{:,.0f}".format(total_income.value) }}</div>
+        <div class="label">Total Income</div>
+    </div>
+    <div class="stat-card expense">
+        <div class="value">${{ "{:,.0f}".format(total_expenses.value) }}</div>
+        <div class="label">Total Expenses</div>
+    </div>
+    <div class="stat-card net">
+        <div class="value">${{ "{:,.0f}".format(net_profit) }}</div>
+        <div class="label">Net {{ 'Profit' if net_profit >= 0 else 'Loss' }}</div>
+    </div>
+    <div class="stat-card {% if profit_margin >= 20 %}income{% elif profit_margin >= 0 %}warning{% else %}expense{% endif %}">
+        <div class="value">{{ "{:.1f}".format(profit_margin) }}%</div>
+        <div class="label">Profit Margin</div>
+    </div>
+</div>
+
+<!-- Monthly Trend Chart -->
 <div class="card mb-20">
-    <h2>Monthly Summary</h2>
+    <h2>Monthly Trend</h2>
+    {% if monthly %}
+    <div class="chart-container" style="padding: 20px 0;">
+        <div class="chart-legend" style="display: flex; gap: 24px; margin-bottom: 20px; font-size: 13px;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 12px; height: 12px; background: var(--success); border-radius: 2px;"></span>
+                Income
+            </span>
+            <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 12px; height: 12px; background: var(--danger); border-radius: 2px;"></span>
+                Expenses
+            </span>
+            <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 12px; height: 12px; background: var(--primary); border-radius: 2px;"></span>
+                Net
+            </span>
+        </div>
+        {% set max_value = namespace(value=1) %}
+        {% for row in monthly %}
+            {% if row.income > max_value.value %}{% set max_value.value = row.income %}{% endif %}
+            {% if row.expenses > max_value.value %}{% set max_value.value = row.expenses %}{% endif %}
+        {% endfor %}
+        <div class="chart-bars" style="display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 0 10px;">
+            {% for row in monthly %}
+            <div class="chart-month" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <div class="bars" style="display: flex; gap: 2px; align-items: flex-end; height: 160px; width: 100%;">
+                    <div style="flex: 1; background: linear-gradient(180deg, var(--success) 0%, #2dd4a0 100%); border-radius: 3px 3px 0 0; height: {{ (row.income / max_value.value * 100) | int }}%; min-height: {% if row.income > 0 %}4px{% else %}0{% endif %};"></div>
+                    <div style="flex: 1; background: linear-gradient(180deg, var(--danger) 0%, #ff6b8a 100%); border-radius: 3px 3px 0 0; height: {{ (row.expenses / max_value.value * 100) | int }}%; min-height: {% if row.expenses > 0 %}4px{% else %}0{% endif %};"></div>
+                    <div style="flex: 1; background: linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%); border-radius: 3px 3px 0 0; height: {{ ((row.income - row.expenses) | abs / max_value.value * 100) | int }}%; min-height: {% if (row.income - row.expenses) != 0 %}4px{% else %}0{% endif %}; opacity: {% if row.income - row.expenses < 0 %}0.5{% else %}1{% endif %};"></div>
+                </div>
+                <div style="font-size: 11px; color: var(--gray-500); font-weight: 500;">{{ row.month[-2:] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p class="text-muted">No data for {{ year }}.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Monthly Table -->
+<div class="card mb-20">
+    <h2>Monthly Breakdown</h2>
     {% if monthly %}
         <table>
             <thead>
@@ -21,89 +96,151 @@
                     <th class="text-right">Income</th>
                     <th class="text-right">Expenses</th>
                     <th class="text-right">Net</th>
+                    <th style="width: 200px;">Performance</th>
                 </tr>
             </thead>
             <tbody>
-                {% set total_income = namespace(value=0) %}
-                {% set total_expenses = namespace(value=0) %}
                 {% for row in monthly %}
-                    {% set total_income.value = total_income.value + row.income %}
-                    {% set total_expenses.value = total_expenses.value + row.expenses %}
+                {% set row_net = row.income - row.expenses %}
+                {% set row_margin = (row_net / row.income * 100) if row.income > 0 else 0 %}
                 <tr>
-                    <td>{{ row.month }}</td>
+                    <td style="font-weight: 500;">{{ row.month }}</td>
                     <td class="amount positive">${{ "{:,.2f}".format(row.income) }}</td>
                     <td class="amount negative">${{ "{:,.2f}".format(row.expenses) }}</td>
-                    <td class="amount {{ 'positive' if row.income - row.expenses >= 0 else 'negative' }}">
-                        ${{ "{:,.2f}".format(row.income - row.expenses) }}
+                    <td class="amount {{ 'positive' if row_net >= 0 else 'negative' }}">
+                        ${{ "{:,.2f}".format(row_net) }}
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="flex: 1; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden;">
+                                {% if row.income > 0 %}
+                                {% set expense_pct = (row.expenses / row.income * 100) %}
+                                <div style="height: 100%; width: {{ expense_pct if expense_pct <= 100 else 100 }}%; background: linear-gradient(90deg, var(--danger) 0%, #ff6b8a 100%); border-radius: 4px;"></div>
+                                {% endif %}
+                            </div>
+                            <span style="font-size: 12px; color: {{ 'var(--success)' if row_margin >= 0 else 'var(--danger)' }}; font-weight: 500; min-width: 45px; text-align: right;">
+                                {{ "{:.0f}".format(row_margin) }}%
+                            </span>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; border-top: 2px solid #333;">
-                    <td>Total</td>
+                <tr style="font-weight: 700; background: var(--gray-50);">
+                    <td>Year Total</td>
                     <td class="amount positive">${{ "{:,.2f}".format(total_income.value) }}</td>
                     <td class="amount negative">${{ "{:,.2f}".format(total_expenses.value) }}</td>
-                    <td class="amount {{ 'positive' if total_income.value - total_expenses.value >= 0 else 'negative' }}">
-                        ${{ "{:,.2f}".format(total_income.value - total_expenses.value) }}
+                    <td class="amount {{ 'positive' if net_profit >= 0 else 'negative' }}">
+                        ${{ "{:,.2f}".format(net_profit) }}
+                    </td>
+                    <td>
+                        <span class="badge {% if profit_margin >= 20 %}badge-income{% elif profit_margin >= 0 %}badge-uncategorized{% else %}badge-expense{% endif %}">
+                            {{ "{:.1f}".format(profit_margin) }}% margin
+                        </span>
                     </td>
                 </tr>
             </tfoot>
         </table>
     {% else %}
-        <p class="text-muted">No data for {{ year }}.</p>
+        <div class="empty-state">
+            <p class="text-muted">No data for {{ year }}.</p>
+        </div>
     {% endif %}
 </div>
 
+<!-- Category Breakdown -->
 <div class="grid grid-2">
     <div class="card">
         <h2>Income by Category</h2>
         {% set income_cats = by_category | selectattr('type', 'equalto', 'income') | list %}
+        {% set income_total = income_cats | sum(attribute='total') %}
         {% if income_cats %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th class="text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cat in income_cats %}
-                    <tr>
-                        <td>{{ cat.name }}</td>
-                        <td class="amount positive">${{ "{:,.2f}".format(cat.total) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                {% for cat in income_cats %}
+                {% set pct = (cat.total / income_total * 100) if income_total > 0 else 0 %}
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-weight: 500; font-size: 14px;">{{ cat.name }}</span>
+                        <span class="amount positive" style="font-size: 14px;">${{ "{:,.2f}".format(cat.total) }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="flex: 1; height: 10px; background: var(--gray-100); border-radius: 5px; overflow: hidden;">
+                            <div style="height: 100%; width: {{ pct }}%; background: linear-gradient(90deg, var(--success) 0%, #2dd4a0 100%); border-radius: 5px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <span style="font-size: 12px; color: var(--gray-500); min-width: 40px; text-align: right;">{{ "{:.1f}".format(pct) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-200); display: flex; justify-content: space-between;">
+                <span style="font-weight: 600;">Total Income</span>
+                <span class="amount positive" style="font-weight: 600;">${{ "{:,.2f}".format(income_total) }}</span>
+            </div>
         {% else %}
-            <p class="text-muted">No categorized income.</p>
+            <div class="empty-state">
+                <p class="text-muted">No categorized income.</p>
+            </div>
         {% endif %}
     </div>
 
     <div class="card">
         <h2>Expenses by Category</h2>
         {% set expense_cats = by_category | selectattr('type', 'equalto', 'expense') | list %}
+        {% set expense_total = expense_cats | sum(attribute='total') %}
         {% if expense_cats %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th class="text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cat in expense_cats %}
-                    <tr>
-                        <td>{{ cat.name }}</td>
-                        <td class="amount negative">${{ "{:,.2f}".format(cat.total) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                {% for cat in expense_cats %}
+                {% set pct = (cat.total / expense_total * 100) if expense_total > 0 else 0 %}
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-weight: 500; font-size: 14px;">{{ cat.name }}</span>
+                        <span class="amount negative" style="font-size: 14px;">${{ "{:,.2f}".format(cat.total) }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="flex: 1; height: 10px; background: var(--gray-100); border-radius: 5px; overflow: hidden;">
+                            <div style="height: 100%; width: {{ pct }}%; background: linear-gradient(90deg, var(--danger) 0%, #ff6b8a 100%); border-radius: 5px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <span style="font-size: 12px; color: var(--gray-500); min-width: 40px; text-align: right;">{{ "{:.1f}".format(pct) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-200); display: flex; justify-content: space-between;">
+                <span style="font-weight: 600;">Total Expenses</span>
+                <span class="amount negative" style="font-weight: 600;">${{ "{:,.2f}".format(expense_total) }}</span>
+            </div>
         {% else %}
-            <p class="text-muted">No categorized expenses.</p>
+            <div class="empty-state">
+                <p class="text-muted">No categorized expenses.</p>
+            </div>
         {% endif %}
     </div>
 </div>
+
+<!-- Profit Summary -->
+{% if total_income.value > 0 or total_expenses.value > 0 %}
+<div class="card" style="margin-top: 24px; background: linear-gradient(135deg, var(--primary-light) 0%, #d4e2fd 100%); border-color: var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0; font-size: 20px; color: var(--primary-dark);">{{ year }} Year-End Summary</h2>
+            <p style="color: var(--gray-600); margin-top: 4px;">Financial performance overview</p>
+        </div>
+        <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+            <div style="text-align: right;">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500);">Revenue</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--success);">${{ "{:,.0f}".format(total_income.value) }}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500);">Expenses</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--danger);">${{ "{:,.0f}".format(total_expenses.value) }}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500);">Net {{ 'Profit' if net_profit >= 0 else 'Loss' }}</div>
+                <div style="font-size: 24px; font-weight: 700; color: {{ 'var(--success)' if net_profit >= 0 else 'var(--danger)' }};">${{ "{:,.0f}".format(net_profit) }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

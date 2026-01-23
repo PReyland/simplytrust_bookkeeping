@@ -3,11 +3,18 @@
 {% block title %}Categorize Transactions - SimplyTrust{% endblock %}
 
 {% block content %}
-<h1 class="mb-20">Categorize Transactions</h1>
+<div class="page-header">
+    <h1>Categorize Transactions</h1>
+    {% if transactions %}
+    <span class="badge badge-uncategorized" style="font-size: 14px; padding: 8px 16px;">
+        {{ transactions|length }} uncategorized
+    </span>
+    {% endif %}
+</div>
 
 {% if transactions %}
 <div class="card">
-    <p class="mb-20">{{ transactions|length }} uncategorized transaction(s). Click a category to assign it.</p>
+    <p class="text-muted mb-20">Select a category for each transaction. Changes are saved automatically.</p>
 
     <table>
         <thead>
@@ -15,19 +22,19 @@
                 <th>Date</th>
                 <th>Description</th>
                 <th class="text-right">Amount</th>
-                <th>Category</th>
+                <th style="width: 220px;">Category</th>
             </tr>
         </thead>
         <tbody>
             {% for txn in transactions %}
             <tr id="row-{{ txn.id }}">
-                <td>{{ txn.date }}</td>
-                <td>{{ txn.description }}</td>
+                <td style="white-space: nowrap;">{{ txn.date }}</td>
+                <td>{{ txn.description[:45] }}{% if txn.description|length > 45 %}...{% endif %}</td>
                 <td class="amount {{ 'positive' if txn.transaction_type == 'income' else 'negative' }}">
                     {{ '+' if txn.transaction_type == 'income' else '-' }}${{ "{:,.2f}".format(txn.amount) }}
                 </td>
                 <td>
-                    <select class="form-control category-select" data-txn-id="{{ txn.id }}" style="min-width: 200px;">
+                    <select class="form-control category-select" data-txn-id="{{ txn.id }}">
                         <option value="">-- Select --</option>
                         <optgroup label="Income">
                             {% for cat in categories if cat.type == 'income' %}
@@ -48,7 +55,12 @@
 </div>
 {% else %}
 <div class="card">
-    <p>All transactions are categorized! <a href="{{ url_for('main.transactions') }}">View all transactions</a></p>
+    <div class="empty-state">
+        <div style="font-size: 48px; margin-bottom: 16px;">✓</div>
+        <p style="font-size: 18px; font-weight: 500; color: var(--gray-700);">All caught up!</p>
+        <p class="text-muted">All transactions are categorized.</p>
+        <a href="{{ url_for('main.transactions') }}" class="btn btn-primary" style="margin-top: 16px;">View Transactions</a>
+    </div>
 </div>
 {% endif %}
 {% endblock %}
@@ -62,6 +74,8 @@ document.querySelectorAll('.category-select').forEach(select => {
 
         if (!categoryId) return;
 
+        const row = document.getElementById(`row-${txnId}`);
+
         try {
             const response = await fetch(`/transactions/${txnId}/categorize`, {
                 method: 'POST',
@@ -70,15 +84,19 @@ document.querySelectorAll('.category-select').forEach(select => {
             });
 
             if (response.ok) {
-                const row = document.getElementById(`row-${txnId}`);
-                row.style.backgroundColor = '#d4edda';
+                row.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+                this.disabled = true;
+                this.style.opacity = '0.6';
+
                 setTimeout(() => {
-                    row.style.transition = 'opacity 0.3s';
-                    row.style.opacity = '0.5';
-                }, 500);
+                    row.style.transition = 'all 0.4s ease';
+                    row.style.opacity = '0.4';
+                    row.style.transform = 'translateX(10px)';
+                }, 600);
             }
         } catch (error) {
             console.error('Error:', error);
+            row.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
         }
     });
 });

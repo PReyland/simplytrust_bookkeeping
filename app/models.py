@@ -57,23 +57,6 @@ class Account:
         conn.close()
         return account_id
 
-    @staticmethod
-    def update_balance(account_id):
-        conn = get_connection()
-        result = conn.execute("""
-            SELECT COALESCE(SUM(
-                CASE
-                    WHEN transaction_type = 'income' THEN amount
-                    WHEN transaction_type = 'expense' THEN -amount
-                    ELSE 0
-                END
-            ), 0) as balance
-            FROM transactions WHERE account_id = ?
-        """, (account_id,)).fetchone()
-        conn.execute("UPDATE accounts SET balance = ? WHERE id = ?", (result['balance'], account_id))
-        conn.commit()
-        conn.close()
-
 
 class Transaction:
     @staticmethod

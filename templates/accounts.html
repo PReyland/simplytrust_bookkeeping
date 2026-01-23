@@ -3,7 +3,9 @@
 {% block title %}Accounts - SimplyTrust{% endblock %}
 
 {% block content %}
-<h1 class="mb-20">Accounts</h1>
+<div class="page-header">
+    <h1>Accounts</h1>
+</div>
 
 <div class="grid grid-2">
     <div class="card">
@@ -37,23 +39,26 @@
                     <tr>
                         <th>Name</th>
                         <th>Type</th>
-                        <th class="text-right">Balance</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for acct in accounts %}
                     <tr>
-                        <td>{{ acct.name }}</td>
-                        <td>{{ acct.account_type }}</td>
-                        <td class="amount {{ 'positive' if acct.balance >= 0 else 'negative' }}">
-                            ${{ "{:,.2f}".format(acct.balance) }}
+                        <td style="font-weight: 500;">{{ acct.name }}</td>
+                        <td>
+                            <span class="badge badge-transfer" style="text-transform: capitalize;">
+                                {{ acct.account_type | replace('_', ' ') }}
+                            </span>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         {% else %}
-            <p class="text-muted">No accounts yet. Add your bank accounts, credit cards, and payment processors to track transactions by account.</p>
+            <div class="empty-state">
+                <p>No accounts yet.</p>
+                <p class="text-muted" style="font-size: 14px;">Add your bank accounts, credit cards, and payment processors to organize transactions by source.</p>
+            </div>
         {% endif %}
     </div>
 </div>

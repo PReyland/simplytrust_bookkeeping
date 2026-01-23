@@ -3,7 +3,9 @@
 {% block title %}Categories - SimplyTrust{% endblock %}
 
 {% block content %}
-<h1 class="mb-20">Categories</h1>
+<div class="page-header">
+    <h1>Categories</h1>
+</div>
 
 <div class="grid grid-2">
     <div class="card">
@@ -26,26 +28,22 @@
 
     <div class="card">
         <h2>Income Categories</h2>
-        <table>
-            <tbody>
-                {% for cat in categories if cat.type == 'income' %}
-                <tr>
-                    <td><span class="badge badge-income">{{ cat.name }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;">
+            {% for cat in categories if cat.type == 'income' %}
+                <span class="badge badge-income" style="padding: 8px 14px;">{{ cat.name }}</span>
+            {% else %}
+                <p class="text-muted">No income categories yet.</p>
+            {% endfor %}
+        </div>
 
-        <h2 style="margin-top: 20px;">Expense Categories</h2>
-        <table>
-            <tbody>
-                {% for cat in categories if cat.type == 'expense' %}
-                <tr>
-                    <td><span class="badge badge-expense">{{ cat.name }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h2>Expense Categories</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            {% for cat in categories if cat.type == 'expense' %}
+                <span class="badge badge-expense" style="padding: 8px 14px;">{{ cat.name }}</span>
+            {% else %}
+                <p class="text-muted">No expense categories yet.</p>
+            {% endfor %}
+        </div>
     </div>
 </div>
 {% endblock %}

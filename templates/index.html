@@ -3,10 +3,11 @@
 {% block title %}Dashboard - SimplyTrust{% endblock %}
 
 {% block content %}
-<div class="flex flex-between mb-20">
-    <h1>Dashboard - {{ year }}</h1>
-    <div>
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <div class="year-nav">
         <a href="?year={{ year - 1 }}" class="btn btn-secondary btn-sm">&larr; {{ year - 1 }}</a>
+        <span class="current-year">{{ year }}</span>
         <a href="?year={{ year + 1 }}" class="btn btn-secondary btn-sm">{{ year + 1 }} &rarr;</a>
     </div>
 </div>
@@ -22,13 +23,13 @@
     </div>
     <div class="stat-card net">
         <div class="value">${{ "{:,.2f}".format(net) }}</div>
-        <div class="label">Net Profit</div>
+        <div class="label">Net {{ 'Profit' if net >= 0 else 'Loss' }}</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card {% if uncategorized_count > 0 %}warning{% endif %}">
         <div class="value">{{ uncategorized_count }}</div>
         <div class="label">Uncategorized</div>
         {% if uncategorized_count > 0 %}
-            <a href="{{ url_for('main.bulk_categorize') }}" class="btn btn-primary btn-sm" style="margin-top: 10px;">Categorize</a>
+            <a href="{{ url_for('main.bulk_categorize') }}" class="btn btn-primary btn-sm" style="margin-top: 12px;">Review</a>
         {% endif %}
     </div>
 </div>
@@ -50,13 +51,15 @@
                     <tr>
                         <td>{{ cat.name }}</td>
                         <td class="amount negative">${{ "{:,.2f}".format(cat.total) }}</td>
-                        <td class="text-right">{{ "{:.1f}".format(cat.total / expenses * 100 if expenses > 0 else 0) }}%</td>
+                        <td class="text-right text-muted">{{ "{:.1f}".format(cat.total / expenses * 100 if expenses > 0 else 0) }}%</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         {% else %}
-            <p class="text-muted">No categorized expenses yet.</p>
+            <div class="empty-state">
+                <p class="text-muted">No categorized expenses yet.</p>
+            </div>
         {% endif %}
     </div>
 
@@ -74,11 +77,11 @@
                 <tbody>
                     {% for txn in recent_transactions %}
                     <tr>
-                        <td>{{ txn.date }}</td>
+                        <td style="white-space: nowrap;">{{ txn.date }}</td>
                         <td>
-                            {{ txn.description[:40] }}{% if txn.description|length > 40 %}...{% endif %}
+                            {{ txn.description[:35] }}{% if txn.description|length > 35 %}...{% endif %}
                             {% if not txn.category_id %}
-                                <span class="badge badge-uncategorized">Uncategorized</span>
+                                <span class="badge badge-uncategorized" style="margin-left: 8px;">Uncategorized</span>
                             {% endif %}
                         </td>
                         <td class="amount {{ 'positive' if txn.transaction_type == 'income' else 'negative' }}">
@@ -88,11 +91,14 @@
                     {% endfor %}
                 </tbody>
             </table>
-            <div style="margin-top: 15px;">
-                <a href="{{ url_for('main.transactions') }}" class="btn btn-primary">View All Transactions</a>
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('main.transactions') }}" class="btn btn-secondary">View All Transactions</a>
             </div>
         {% else %}
-            <p class="text-muted">No transactions yet. <a href="{{ url_for('main.import_file') }}">Import a bank statement</a> to get started.</p>
+            <div class="empty-state">
+                <p>No transactions yet.</p>
+                <a href="{{ url_for('main.import_file') }}" class="btn btn-primary">Import Bank Statement</a>
+            </div>
         {% endif %}
     </div>
 </div>

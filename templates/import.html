@@ -3,7 +3,9 @@
 {% block title %}Import - SimplyTrust{% endblock %}
 
 {% block content %}
-<h1 class="mb-20">Import Bank Statement</h1>
+<div class="page-header">
+    <h1>Import Bank Statement</h1>
+</div>
 
 <div class="grid grid-2">
     <div class="card">
@@ -11,7 +13,8 @@
         <form method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label>Select CSV or PDF file</label>
-                <input type="file" name="file" class="form-control" accept=".csv,.pdf" required>
+                <input type="file" name="file" class="form-control" accept=".csv,.pdf" required
+                       style="padding: 12px; background: var(--gray-50);">
             </div>
 
             <div class="form-group">
@@ -22,34 +25,39 @@
                         <option value="{{ acct.id }}">{{ acct.name }}</option>
                     {% endfor %}
                 </select>
-                <small class="text-muted">Associate imported transactions with a specific account</small>
+                <small class="text-muted" style="display: block; margin-top: 6px;">Associate imported transactions with a specific account</small>
             </div>
 
-            <button type="submit" class="btn btn-primary">Import</button>
+            <button type="submit" class="btn btn-primary">Import Transactions</button>
         </form>
     </div>
 
     <div class="card">
         <h2>Supported Formats</h2>
-        <h3 style="margin: 15px 0 10px;">CSV Files</h3>
-        <p>Most bank CSV exports work automatically. The importer looks for columns named:</p>
-        <ul style="margin: 10px 0 10px 20px;">
+
+        <h3 style="margin: 20px 0 10px;">CSV Files</h3>
+        <p style="color: var(--gray-600); line-height: 1.7;">Most bank CSV exports work automatically. The importer detects columns named:</p>
+        <ul style="margin: 12px 0 12px 24px; color: var(--gray-600); line-height: 1.8;">
             <li><strong>Date:</strong> date, posted, transaction date</li>
             <li><strong>Description:</strong> description, memo, narrative, details, payee</li>
             <li><strong>Amount:</strong> amount, value, or separate debit/credit columns</li>
         </ul>
 
-        <h3 style="margin: 15px 0 10px;">PDF Files</h3>
-        <p>PDF parsing attempts to extract transactions from tables. Results may vary depending on the PDF format. For best results, export as CSV from your bank if possible.</p>
+        <h3 style="margin: 20px 0 10px;">PDF Files</h3>
+        <p style="color: var(--gray-600); line-height: 1.7;">PDF parsing extracts transactions from tables. Results may vary. For best results, export as CSV from your bank when possible.</p>
 
-        <h3 style="margin: 15px 0 10px;">Duplicate Protection</h3>
-        <p>The importer tracks file hashes to prevent importing the same file twice.</p>
+        <div style="background: var(--gray-50); padding: 16px; border-radius: var(--radius-sm); margin-top: 20px; border: 1px solid var(--gray-200);">
+            <strong style="color: var(--gray-700);">Duplicate Protection</strong>
+            <p style="color: var(--gray-600); margin-top: 6px; font-size: 14px;">The importer tracks file hashes to prevent importing the same file twice.</p>
+        </div>
     </div>
 </div>
 
 {% if not accounts %}
-<div class="card" style="margin-top: 20px;">
-    <p><strong>Tip:</strong> <a href="{{ url_for('main.accounts') }}">Create an account</a> first (e.g., "Business Checking", "Business Credit Card") to organize your transactions.</p>
+<div class="card" style="margin-top: 8px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fcd34d;">
+    <p style="color: #92400e; margin: 0;">
+        <strong>Tip:</strong> <a href="{{ url_for('main.accounts') }}" style="color: #92400e; text-decoration: underline;">Create an account</a> first (e.g., "Business Checking", "Business Credit Card") to organize your transactions by source.
+    </p>
 </div>
 {% endif %}
 {% endblock %}
