@@ -28,15 +28,31 @@ def check_already_imported(file_hash):
     return dict(row) if row else None
 
 
-def record_import(filename, file_hash, rows_imported):
-    """Record a successful import."""
-    conn = get_connection()
-    conn.execute(
-        "INSERT INTO import_history (filename, file_hash, rows_imported) VALUES (?, ?, ?)",
-        (filename, file_hash, rows_imported)
-    )
-    conn.commit()
-    conn.close()
+def record_import(filename, file_hash, rows_imported, conn=None):
+    """
+    Record a successful import.
+
+    Args:
+        filename: Name of imported file
+        file_hash: SHA-256 hash of file content
+        rows_imported: Number of rows imported
+        conn: Optional database connection. If provided, uses it (caller manages transaction).
+              If None, creates own connection with auto-commit.
+    """
+    should_close = conn is None
+    if conn is None:
+        conn = get_connection()
+
+    try:
+        conn.execute(
+            "INSERT INTO import_history (filename, file_hash, rows_imported) VALUES (?, ?, ?)",
+            (filename, file_hash, rows_imported)
+        )
+        if should_close:
+            conn.commit()
+    finally:
+        if should_close:
+            conn.close()
 
 
 def parse_amount(amount_str):
@@ -112,7 +128,8 @@ def import_csv(file_content, filename, account_id=None):
         return {
             'success': False,
             'error': f"This file was already imported on {existing['imported_at']}",
-            'rows_imported': 0
+            'rows_imported': 0,
+            'rows_skipped': 0
         }
 
     try:
@@ -123,32 +140,41 @@ def import_csv(file_content, filename, account_id=None):
         df = pd.read_csv(io.StringIO(file_content))
 
         if df.empty:
-            return {'success': False, 'error': 'CSV file is empty', 'rows_imported': 0}
+            return {'success': False, 'error': 'CSV file is empty', 'rows_imported': 0, 'rows_skipped': 0}
 
         # Detect columns
         cols = detect_csv_columns(df)
 
         if not cols['date']:
-            return {'success': False, 'error': 'Could not detect date column', 'rows_imported': 0}
+            return {'success': False, 'error': 'Could not detect date column', 'rows_imported': 0, 'rows_skipped': 0}
         if not cols['description']:
-            return {'success': False, 'error': 'Could not detect description column', 'rows_imported': 0}
+            return {'success': False, 'error': 'Could not detect description column', 'rows_imported': 0, 'rows_skipped': 0}
         if not cols['amount'] and not (cols['debit'] or cols['credit']):
-            return {'success': False, 'error': 'Could not detect amount column', 'rows_imported': 0}
+            return {'success': False, 'error': 'Could not detect amount column', 'rows_imported': 0, 'rows_skipped': 0}
 
         transactions = []
-        for _, row in df.iterrows():
+        skipped_rows = 0
+        skip_reasons = []
+
+        for idx, row in df.iterrows():
             date = parse_date(row[cols['date']])
             if not date:
+                skipped_rows += 1
+                skip_reasons.append(f"Row {idx + 2}: Invalid date")
                 continue
 
             description = str(row[cols['description']]).strip()
             if not description or description == 'nan':
+                skipped_rows += 1
+                skip_reasons.append(f"Row {idx + 2}: Empty description")
                 continue
 
             # Determine amount and type
             if cols['amount']:
                 amount = parse_amount(row[cols['amount']])
                 if amount is None:
+                    skipped_rows += 1
+                    skip_reasons.append(f"Row {idx + 2}: Invalid amount")
                     continue
                 transaction_type = 'income' if amount >= 0 else 'expense'
                 amount = abs(amount)
@@ -163,7 +189,12 @@ def import_csv(file_content, filename, account_id=None):
                     amount = debit
                     transaction_type = 'expense'
                 else:
+                    skipped_rows += 1
+                    skip_reasons.append(f"Row {idx + 2}: No valid amount in debit/credit columns")
                     continue
+
+            # Round to 2 decimal places for financial accuracy
+            amount = round(amount, 2)
 
             transactions.append({
                 'date': date,
@@ -175,23 +206,41 @@ def import_csv(file_content, filename, account_id=None):
             })
 
         if not transactions:
-            return {'success': False, 'error': 'No valid transactions found in CSV', 'rows_imported': 0}
+            return {
+                'success': False,
+                'error': 'No valid transactions found in CSV',
+                'rows_imported': 0,
+                'rows_skipped': skipped_rows,
+                'skip_reasons': skip_reasons[:10]  # First 10 reasons
+            }
 
-        # Bulk insert
+        # Bulk insert and record import (atomic operation)
         from app.models import Transaction
-        Transaction.bulk_create(transactions)
+        from app.database import get_connection
 
-        # Record import
-        record_import(filename, file_hash, len(transactions))
+        conn = get_connection()
+        try:
+            conn.execute("BEGIN TRANSACTION")
+            # Pass connection to both operations for true atomicity
+            Transaction.bulk_create(transactions, conn=conn)
+            record_import(filename, file_hash, len(transactions), conn=conn)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
 
         return {
             'success': True,
             'rows_imported': len(transactions),
+            'rows_skipped': skipped_rows,
+            'skip_reasons': skip_reasons[:10] if skip_reasons else None,
             'transactions': transactions[:10]  # Return first 10 for preview
         }
 
     except Exception as e:
-        return {'success': False, 'error': str(e), 'rows_imported': 0}
+        return {'success': False, 'error': str(e), 'rows_imported': 0, 'rows_skipped': 0}
 
 
 def parse_mtb_statement(text):
@@ -281,7 +330,8 @@ def import_pdf(file_path, account_id=None):
             return {
                 'success': False,
                 'error': f"This file was already imported on {existing['imported_at']}",
-                'rows_imported': 0
+                'rows_imported': 0,
+                'rows_skipped': 0
             }
 
         transactions = []
@@ -316,7 +366,7 @@ def import_pdf(file_path, account_id=None):
                                             transactions.append({
                                                 'date': date,
                                                 'description': str(desc).strip(),
-                                                'amount': abs(amt),
+                                                'amount': abs(round(amt, 2)),
                                                 'transaction_type': transaction_type,
                                             })
                                         break
@@ -326,24 +376,38 @@ def import_pdf(file_path, account_id=None):
                 'success': False,
                 'error': 'Could not extract transactions from PDF. Try exporting as CSV from your bank.',
                 'rows_imported': 0,
+                'rows_skipped': 0,
                 'raw_text': full_text[:2000]
             }
 
-        # Add account_id to all transactions
+        # Add account_id and round amounts
         for t in transactions:
             t['account_id'] = account_id
+            t['amount'] = round(t['amount'], 2)
 
-        # Bulk insert
+        # Bulk insert and record import (atomic operation)
         from app.models import Transaction
-        Transaction.bulk_create(transactions)
+        from app.database import get_connection
 
-        record_import(Path(file_path).name, file_hash, len(transactions))
+        conn = get_connection()
+        try:
+            conn.execute("BEGIN TRANSACTION")
+            # Pass connection to both operations for true atomicity
+            Transaction.bulk_create(transactions, conn=conn)
+            record_import(Path(file_path).name, file_hash, len(transactions), conn=conn)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
 
         return {
             'success': True,
             'rows_imported': len(transactions),
+            'rows_skipped': 0,  # PDF extraction doesn't track skipped rows currently
             'transactions': transactions[:10]
         }
 
     except Exception as e:
-        return {'success': False, 'error': str(e), 'rows_imported': 0}
+        return {'success': False, 'error': str(e), 'rows_imported': 0, 'rows_skipped': 0}

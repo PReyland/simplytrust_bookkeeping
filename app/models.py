@@ -150,15 +150,42 @@ class Transaction:
         conn.close()
 
     @staticmethod
-    def bulk_create(transactions):
-        conn = get_connection()
+    def bulk_create(transactions, conn=None):
+        """
+        Bulk insert transactions.
+
+        Args:
+            transactions: List of transaction dicts to insert
+            conn: Optional database connection. If provided, caller is responsible for
+                  transaction management and closing. If None, creates own connection
+                  with automatic transaction handling.
+        """
+        should_close = conn is None
+        if conn is None:
+            conn = get_connection()
+
         cursor = conn.cursor()
-        for t in transactions:
-            cursor.execute("""
-                INSERT INTO transactions (date, description, amount, transaction_type, category_id, account_id, reference)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (t['date'], t['description'], t['amount'], t['transaction_type'],
-                  t.get('category_id'), t.get('account_id'), t.get('reference')))
-        conn.commit()
-        conn.close()
-        return len(transactions)
+        try:
+            if should_close:
+                # Only manage transaction if we own the connection
+                cursor.execute("BEGIN TRANSACTION")
+
+            for t in transactions:
+                cursor.execute("""
+                    INSERT INTO transactions (date, description, amount, transaction_type, category_id, account_id, reference)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (t['date'], t['description'], t['amount'], t['transaction_type'],
+                      t.get('category_id'), t.get('account_id'), t.get('reference')))
+
+            if should_close:
+                # Only commit if we own the connection
+                conn.commit()
+
+            return len(transactions)
+        except Exception as e:
+            if should_close:
+                conn.rollback()
+            raise e
+        finally:
+            if should_close:
+                conn.close()

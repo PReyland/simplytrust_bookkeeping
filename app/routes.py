@@ -112,17 +112,72 @@ def transactions():
 def add_transaction():
     """Add a new transaction manually."""
     if request.method == 'POST':
-        Transaction.create(
-            date=request.form['date'],
-            description=request.form['description'],
-            amount=float(request.form['amount']),
-            transaction_type=request.form['transaction_type'],
-            category_id=request.form.get('category_id') or None,
-            account_id=request.form.get('account_id') or None,
-            notes=request.form.get('notes')
-        )
-        flash('Transaction added successfully', 'success')
-        return redirect(url_for('main.transactions'))
+        try:
+            # Validate required fields
+            date = request.form.get('date', '').strip()
+            description = request.form.get('description', '').strip()
+            amount_str = request.form.get('amount', '').strip()
+            transaction_type = request.form.get('transaction_type', '').strip()
+
+            if not date or not description or not amount_str or not transaction_type:
+                flash('All required fields must be filled', 'error')
+                return redirect(request.url)
+
+            # Validate and parse amount
+            try:
+                amount = float(amount_str)
+                if amount <= 0:
+                    flash('Amount must be greater than 0', 'error')
+                    return redirect(request.url)
+                # Round to 2 decimal places for financial accuracy
+                amount = round(amount, 2)
+            except ValueError:
+                flash('Invalid amount format', 'error')
+                return redirect(request.url)
+
+            # Validate transaction type
+            if transaction_type not in ('income', 'expense', 'transfer'):
+                flash('Invalid transaction type', 'error')
+                return redirect(request.url)
+
+            # Validate date format (YYYY-MM-DD)
+            try:
+                datetime.strptime(date, '%Y-%m-%d')
+            except ValueError:
+                flash('Invalid date format', 'error')
+                return redirect(request.url)
+
+            # Validate category_id exists if provided
+            category_id = request.form.get('category_id') or None
+            if category_id:
+                category = Category.get(int(category_id))
+                if not category:
+                    flash('Invalid category selected', 'error')
+                    return redirect(request.url)
+
+            # Validate account_id exists if provided
+            account_id = request.form.get('account_id') or None
+            if account_id:
+                account = Account.get(int(account_id))
+                if not account:
+                    flash('Invalid account selected', 'error')
+                    return redirect(request.url)
+
+            Transaction.create(
+                date=date,
+                description=description,
+                amount=amount,
+                transaction_type=transaction_type,
+                category_id=category_id,
+                account_id=account_id,
+                notes=request.form.get('notes')
+            )
+            flash('Transaction added successfully', 'success')
+            return redirect(url_for('main.transactions'))
+
+        except Exception as e:
+            flash(f'Error adding transaction: {str(e)}', 'error')
+            return redirect(request.url)
 
     categories = Category.all()
     accounts = Account.all()
@@ -141,19 +196,74 @@ def edit_transaction(id):
         return redirect(url_for('main.transactions'))
 
     if request.method == 'POST':
-        Transaction.update(
-            id,
-            date=request.form['date'],
-            description=request.form['description'],
-            amount=float(request.form['amount']),
-            transaction_type=request.form['transaction_type'],
-            category_id=request.form.get('category_id') or None,
-            account_id=request.form.get('account_id') or None,
-            notes=request.form.get('notes'),
-            reconciled=1 if request.form.get('reconciled') else 0
-        )
-        flash('Transaction updated', 'success')
-        return redirect(url_for('main.transactions'))
+        try:
+            # Validate required fields
+            date = request.form.get('date', '').strip()
+            description = request.form.get('description', '').strip()
+            amount_str = request.form.get('amount', '').strip()
+            transaction_type = request.form.get('transaction_type', '').strip()
+
+            if not date or not description or not amount_str or not transaction_type:
+                flash('All required fields must be filled', 'error')
+                return redirect(request.url)
+
+            # Validate and parse amount
+            try:
+                amount = float(amount_str)
+                if amount <= 0:
+                    flash('Amount must be greater than 0', 'error')
+                    return redirect(request.url)
+                # Round to 2 decimal places for financial accuracy
+                amount = round(amount, 2)
+            except ValueError:
+                flash('Invalid amount format', 'error')
+                return redirect(request.url)
+
+            # Validate transaction type
+            if transaction_type not in ('income', 'expense', 'transfer'):
+                flash('Invalid transaction type', 'error')
+                return redirect(request.url)
+
+            # Validate date format (YYYY-MM-DD)
+            try:
+                datetime.strptime(date, '%Y-%m-%d')
+            except ValueError:
+                flash('Invalid date format', 'error')
+                return redirect(request.url)
+
+            # Validate category_id exists if provided
+            category_id = request.form.get('category_id') or None
+            if category_id:
+                category = Category.get(int(category_id))
+                if not category:
+                    flash('Invalid category selected', 'error')
+                    return redirect(request.url)
+
+            # Validate account_id exists if provided
+            account_id = request.form.get('account_id') or None
+            if account_id:
+                account = Account.get(int(account_id))
+                if not account:
+                    flash('Invalid account selected', 'error')
+                    return redirect(request.url)
+
+            Transaction.update(
+                id,
+                date=date,
+                description=description,
+                amount=amount,
+                transaction_type=transaction_type,
+                category_id=category_id,
+                account_id=account_id,
+                notes=request.form.get('notes'),
+                reconciled=1 if request.form.get('reconciled') else 0
+            )
+            flash('Transaction updated', 'success')
+            return redirect(url_for('main.transactions'))
+
+        except Exception as e:
+            flash(f'Error updating transaction: {str(e)}', 'error')
+            return redirect(request.url)
 
     categories = Category.all()
     accounts = Account.all()
@@ -205,7 +315,14 @@ def import_file():
                 result = import_pdf(filepath, account_id)
 
             if result['success']:
-                flash(f"Successfully imported {result['rows_imported']} transactions", 'success')
+                msg = f"Successfully imported {result['rows_imported']} transactions"
+                if result.get('rows_skipped', 0) > 0:
+                    msg += f" ({result['rows_skipped']} rows skipped)"
+                flash(msg, 'success')
+                # Show skip reasons if available
+                if result.get('skip_reasons'):
+                    for reason in result['skip_reasons'][:5]:  # Show first 5
+                        flash(reason, 'warning')
             else:
                 flash(f"Import failed: {result['error']}", 'error')
 

@@ -7,6 +7,8 @@ DB_PATH = Path(__file__).parent.parent / "bookkeeping.db"
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    # Enable foreign key constraints
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -30,7 +32,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             account_type TEXT NOT NULL,
-            balance REAL DEFAULT 0,
+            balance REAL DEFAULT 0,  -- NOTE: Currently not maintained/updated. Always shows 0. Consider removing in future migration.
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
